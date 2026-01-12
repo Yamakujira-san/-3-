@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>英検3級 集中学習アプリ</title>
+    <style>
+        :root { --primary: #007AFF; --bg: #F2F2F7; --card: #FFFFFF; --accent: #FF9500; --danger: #FF3B30; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1C1C1E; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .card { background: var(--card); padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        #menu-screen { text-align: center; display: block; }
+        .menu-btn { width: 100%; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; cursor: pointer; color: white; transition: transform 0.1s; }
+        .btn-order { background: var(--primary); }
+        .btn-random { background: var(--accent); }
+        .btn-weak { background: var(--danger); }
+        #quiz-screen { display: none; }
+        h2 { font-size: 15px; margin: 0 0 10px 0; color: #8E8E93; line-height: 1.4; }
+        .instruction { color: var(--primary); font-weight: bold; font-size: 14px; margin-bottom: 10px; }
+        #q-image-container { width: 100%; margin-bottom: 20px; display: none; cursor: zoom-in; }
+        #q-image-container img { width: 100%; border-radius: 10px; border: 1px solid #ddd; }
+        #q-text { font-size: 1.1rem; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; }
+        .option { display: block; width: 100%; padding: 16px; margin-bottom: 12px; border: 1px solid #D1D1D6; border-radius: 12px; background: white; text-align: left; font-size: 16px; cursor: pointer; }
+        .correct { background: #34C759 !important; color: white; border-color: #34C759; font-weight: bold; }
+        .wrong { background: #FF3B30 !important; color: white; border-color: #FF3B30; }
+        #explanation { display: none; margin-top: 20px; padding: 15px; background: #F2F2F7; border-radius: 12px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; border-left: 5px solid var(--primary); }
+        .nav-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .nav-btn { flex: 1; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        #next-btn { background: var(--primary); color: white; display: none; width: 100%; margin-top: 10px; height: 55px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; }
+        #prev-btn { background: #E5E5EA; color: #1C1C1E; }
+        #stop-btn { background: #8E8E93; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="menu-screen">
+            <div class="card">
+                <h1 style="font-size: 22px; margin-bottom: 30px;">英検3級 2025-2<br>学習メニュー</h1>
+                <button class="menu-btn btn-order" onclick="startQuiz('order')">1番から順番に解く</button>
+                <button class="menu-btn btn-random" onclick="startQuiz('random')">ランダムに出題</button>
+                <button class="menu-btn btn-weak" onclick="startQuiz('weak')">苦手問題に挑戦</button>
+                <p id="weak-count" style="font-size: 14px; color: #8E8E93;"></p>
+            </div>
+        </div>
+        <div id="quiz-screen">
+            <div class="card">
+                <h2 id="q-num"></h2>
+                <div class="instruction" id="q-instruction"></div>
+                <div id="q-image-container" onclick="zoomImage()">
+                    <img id="q-image" src="" alt="問題資料">
+                </div>
+                <div id="q-text"></div>
+                <div id="options"></div>
+                <div id="explanation"></div>
+            </div>
+            <button id="next-btn" onclick="nextQuestion()">次の問題へ</button>
+            <div class="nav-buttons">
+                <button id="prev-btn" class="nav-btn" onclick="prevQuestion()">前へ</button>
+                <button id="stop-btn" class="nav-btn" onclick="goHome()">やめる</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const allQuestions = [
+            /* リーディング 1-15 */
+            { id: 1, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: Can I borrow your book?\nB: Sure. I'll (  ) it to you, but please give it back to me next week.", options: ["lend", "catch", "cost", "close"], ans: 0, exp: "正解：1. lend\n解説：「借りる(borrow)」に対し、「貸す(lend)」がペアになります。" },
+            { id: 2, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: This pool is so (  ) that I can't see the bottom.\nB: Don't get into it. It can be dangerous.", options: ["high", "clean", "short", "deep"], ans: 3, exp: "正解：4. deep\n解説：「底が見えない」ことから、プールが「深い」と判断します。" },
+            { id: 3, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: What was my (  ) score on the test, Ms. Green?\nB: It was 80 points, John.", options: ["quick", "clean", "happy", "total"], ans: 3, exp: "正解：4. total\n解説：「合計点」は total score と表現します。" },
+            { id: 4, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: Let's go to the new (  ) and see the fish.\nB: Good idea! I want to see the dolphins.", options: ["aquarium", "cafeteria", "stadium", "university"], ans: 0, exp: "正解：1. aquarium\n解説：魚やイルカがいる場所は水族館です。" },
+            { id: 5, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "Mr. Yamamoto is a very busy man. He doesn't have (  ) time to read newspapers.", options: ["many", "high", "enough", "little"], ans: 2, exp: "正解：3. enough\n解説：「〜するための（十分な）時間がない」という文脈です。" },
+            { id: 6, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "Yumi (  ) a video of her dance class. She sent it to her grandfather.", options: ["recorded", "opened", "painted", "celebrated"], ans: 0, exp: "正解：1. recorded\n解説：動画を「録画した」ので送ることができた、と繋がります。" },
+            { id: 7, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: It's getting cold. Do you need a (  )?\nB: Yes, please.", options: ["cousin", "bottle", "blanket", "castle"], ans: 2, exp: "正解：3. blanket\n解説：寒い時に必要なのは毛布です。" },
+            { id: 8, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: Did you ask your boss about the new project?\nB: Not yet. She's always in a (  ), so I never have a chance to talk to her.", options: ["hurry", "promise", "calendar", "package"], ans: 0, exp: "正解：1. hurry\n解説：「in a hurry」で「急いでいる」という重要熟語です。" },
+            { id: 9, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "Jenny saw her grandparents (  ) the first time in years.", options: ["for", "from", "out", "over"], ans: 0, exp: "正解：1. for\n解説：「for the first time」で「初めて」という熟語です。" },
+            { id: 10, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "Jeff plays video games (  ) the time, so his mother always gets angry.", options: ["both", "all", "that", "our"], ans: 1, exp: "正解：2. all\n解説：「all the time」で「いつも」です。" },
+            { id: 11, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "Tim was (  ) from school for a week because he was sick.", options: ["silent", "narrow", "straight", "absent"], ans: 3, exp: "正解：4. absent\n解説：「be absent from ~」で「〜を欠席する」となります。" },
+            { id: 12, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "Yuki was looking (  ) to going to the concert with her friends.", options: ["right", "forward", "up", "after"], ans: 1, exp: "正解：2. forward\n解説：「look forward to ~ing」で「〜を楽しみに待つ」です。" },
+            { id: 13, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: Do you have anything (  )?\nB: Yes. I have some tea.", options: ["drank", "drinking", "to drink", "drinks"], ans: 2, exp: "正解：3. to drink\n解説：「何か飲むもの」は anything to drink です。" },
+            { id: 14, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "Nancy is happy because the tomato plant she has (  ) is very big.", options: ["grown", "grew", "grow", "grows"], ans: 0, exp: "正解：1. grown\n解説：have ＋ 過去分詞で現在完了形を作ります。" },
+            { id: 15, category: "リーディング", instruction: "（ ）に入れるのに最も適切なものを1つ選びなさい。", text: "A: Bob, you walked the dog, (  ) you?\nB: No, Mom. I'll do it after dinner.", options: ["weren't", "couldn't", "didn't", "shouldn't"], ans: 2, exp: "正解：3. didn't\n解説：walked（一般動詞過去）の付加疑問は didn't you? になります。" },
+            /* 対話文 16-20 */
+            { id: 16, category: "対話文", instruction: "（ ）に最も適切なものを選びなさい。", text: "Wife: How about Greenville? (  )\nHusband: Sounds good. We can go fishing and swimming.", options: ["I lost my passport.", "There's a big lake there.", "I hate traveling.", "It's too crowded."], ans: 1, exp: "正解：2. 釣りや泳ぎができる場所なので「大きな湖がある」を選びます。" },
+            { id: 17, category: "対話文", instruction: "（ ）に最も適切なものを選びなさい。", text: "Boy: I called you last night, but you didn't answer.\nGirl: Sorry, (  ) I have to give it to my teacher today.", options: ["I forgot the question.", "I was writing a report.", "I don't have a phone.", "I don't know the answer."], ans: 1, exp: "正解：2. 今日提出するレポートを書いていた、と答えるのが自然です。" },
+            { id: 18, category: "対話文", instruction: "（ ）に最も適切なものを選びなさい。", text: "Mother: Fred, the TV is too loud. (  ) please?\nSon: All right, Mom.", options: ["Will you pick it up,", "Will you buy it,", "Will you turn it down,", "Will you play it,"], ans: 2, exp: "正解：3. 音がうるさいので「音を下げて(turn it down)」と頼んでいます。" },
+            { id: 19, category: "対話文", instruction: "（ ）に最も適切なものを選びなさい。", text: "Sister: Why are you eating my piece of cake?\nBrother: (  ) It's mine.", options: ["This isn't yours.", "Thanks.", "It wasn't me.", "After breakfast."], ans: 0, exp: "正解：1. 「僕のだ」と言っているので「君のではない」という1番が正解です。" },
+            { id: 20, category: "対話文", instruction: "（ ）に最も適切なものを選びなさい。", text: "Girl: When's your tennis match?\nBoy: Tomorrow. I haven't practiced much, so (  )", options: ["it starts at two.", "I'm a little worried.", "it's going to rain.", "I like your racket."], ans: 1, exp: "正解：2. 練習不足なので「不安だ(worried)」と繋がります。" },
+            /* 読解 21-30 */
+            { id: 21, category: "掲示板", instruction: "質問の答えを選びなさい。", image: "image_aef269.png", text: "What must students do on October 18?", options: ["Clean the garden.", "Take pictures of the house.", "Bring their own lunch.", "Take an exam at school."], ans: 2, exp: "正解：3. 掲示に「お昼を持ってくる(bring own lunch)」よう指示があります。" },
+            { id: 22, category: "掲示板", instruction: "質問の答えを選びなさい。", image: "image_aef269.png", text: "Where can students take photos during the tour?", options: ["In the kitchen.", "In the garden.", "In the bedrooms.", "In the living room."], ans: 1, exp: "正解：2. 庭(garden)での撮影は許可されています。" },
+            { id: 23, category: "Eメール", instruction: "質問の答えを選びなさい。", image: "image_aef73a.png", text: "When did Sophia meet Mia in her class at college?", options: ["Four years ago.", "Last Monday.", "Last Friday.", "Last Saturday."], ans: 1, exp: "正解：2. メール冒頭に last Monday とあります。" },
+            { id: 24, category: "Eメール", instruction: "質問の答えを選びなさい。", image: "image_aef73a.png", text: "What did Sophia and Mia often do together when they were junior high students?", options: ["They tried sports.", "They drew pictures.", "They studied math at the library.", "They went home."], ans: 2, exp: "正解：3. 母のメールに「図書館で数学を勉強した」記述があります。" },
+            { id: 25, category: "Eメール", instruction: "質問の答えを選びなさい。", image: "image_aef73a.png", text: "What will Sophia's mother do on October 20?", options: ["Pick her up.", "Work at the hospital.", "Visit the office.", "Meet her friends."], ans: 1, exp: "正解：2. 母は仕事のため迎えに行けないと言っています。" },
+            { id: 26, category: "物語", instruction: "質問の答えを選びなさい。", image: "image_aefafc.png", text: "How many people live in Buñol?", options: ["About 10,000.", "About 20,000.", "About 30,000.", "About 40,000."], ans: 0, exp: "正解：1. 約1万人(around 10,000)とあります。" },
+            { id: 27, category: "物語", instruction: "質問の答えを選びなさい。", image: "image_aefafc.png", text: "What happened during the parade in 1945?", options: ["Kids stole tomatoes.", "New festival.", "A musician gave food.", "A musician got angry."], ans: 3, exp: "正解：4. 演奏者が怒った(got angry)ことがきっかけです。" },
+            { id: 28, category: "物語", instruction: "質問の答えを選びなさい。", image: "image_aefafc.png", text: "What do a lot of people do at La Tomatina?", options: ["Cook soup.", "Sell shirts.", "Wear white clothes.", "Throw water."], ans: 2, exp: "正解：3. 白い服(wear white clothes)を着る人が多いです。" },
+            { id: 29, category: "物語", instruction: "質問の答えを選びなさい。", image: "image_aefafc.png", text: "Some people do not like La Tomatina because", options: ["tomatoes are not fresh.", "hard to clean up.", "too expensive.", "too many tomatoes."], ans: 1, exp: "正解：2. 片付けが大変(hard to clean up)という理由です。" },
+            { id: 30, category: "物語", instruction: "質問の答えを選びなさい。", image: "image_aefafc.png", text: "What is this story about?", options: ["History.", "How to grow.", "A famous festival.", "A musician."], ans: 2, exp: "正解：3. 有名な祭り(famous festival)についてです。" },
+            /* ライティング 31-32 */
+            { id: 31, type: "writing", category: "ライティング", instruction: "指示に従い James へ返信を書きなさい。", text: "[Email Reply] James asks:\n1. Where did you buy the gift?\n2. When will you give it to him?", options: ["解答例を表示"], ans: 0, exp: "解答例：I bought the gift at the mall. I will give it to him next Monday." },
+            { id: 32, type: "writing", category: "ライティング", instruction: "考えと理由を2つ書きなさい。", text: "[Question] What do you like to eat when you are tired?", options: ["解答例を表示"], ans: 0, exp: "解答例：I like to eat chocolate when I am tired. First, it is sweet. Second, it makes me happy." },
+            /* リスニング */
+            { id: "L1", type: "listening", category: "リスニング", instruction: "イラストに合う最も適切な応答を1つ選びなさい。", image: "listening_no1.png", text: "[Listen] Where shall I put the table?", options: ["It's very heavy.", "Next to the sofa.", "Bought it yesterday."], ans: 1, exp: "正解：2. 具体的な場所を答えている2番が正解です。" }
+        ];
+
+        let quizQuestions = [];
+        let currentIdx = 0;
+        let answered = false;
+        let weakList = JSON.parse(localStorage.getItem('eiken_weak_list') || '[]');
+
+        function updateWeakCount() {
+            document.getElementById('weak-count').innerText = `苦手リスト: ${weakList.length}問`;
+        }
+
+        function zoomImage() {
+            window.open(document.getElementById('q-image').src, '_blank');
+        }
+
+        function startQuiz(mode) {
+            if (mode === 'order') quizQuestions = [...allQuestions];
+            else if (mode === 'random') quizQuestions = [...allQuestions].sort(() => Math.random() - 0.5);
+            else if (mode === 'weak') {
+                quizQuestions = allQuestions.filter(q => weakList.includes(q.id));
+                if (quizQuestions.length === 0) { alert("苦手問題がありません！"); return; }
+            }
+            currentIdx = 0;
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('quiz-screen').style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = quizQuestions[currentIdx];
+            document.getElementById('q-num').innerText = `${q.category} (${currentIdx + 1}/${quizQuestions.length})`;
+            document.getElementById('q-instruction').innerText = q.instruction;
+            document.getElementById('q-text').innerText = q.text;
+            const imgCont = document.getElementById('q-image-container');
+            if (q.image) { document.getElementById('q-image').src = q.image; imgCont.style.display = 'block'; }
+            else { imgCont.style.display = 'none'; }
+            const optDiv = document.getElementById('options');
+            optDiv.innerHTML = "";
+            q.options.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = "option";
+                btn.innerText = (q.type === "writing") ? opt : `${i+1}. ${opt}`;
+                btn.onclick = () => checkAnswer(i);
+                optDiv.appendChild(btn);
+            });
+            document.getElementById('explanation').style.display = "none";
+            document.getElementById('next-btn').style.display = "none";
+            document.getElementById('prev-btn').style.visibility = (currentIdx === 0) ? "hidden" : "visible";
+            answered = false;
+        }
+
+        function checkAnswer(i) {
+            if (answered) return;
+            answered = true;
+            const q = quizQuestions[currentIdx];
+            const btns = document.getElementsByClassName('option');
+            if (i === q.ans) {
+                btns[i].classList.add('correct');
+                weakList = weakList.filter(id => id !== q.id); // 正解したら削除
+            } else {
+                btns[i].classList.add('wrong');
+                btns[q.ans].classList.add('correct');
+                if (!weakList.includes(q.id)) weakList.push(q.id); // 間違えたら追加
+            }
+            localStorage.setItem('eiken_weak_list', JSON.stringify(weakList));
+            document.getElementById('explanation').innerText = q.exp;
+            document.getElementById('explanation').style.display = "block";
+            document.getElementById('next-btn').style.display = "block";
+        }
+
+        function nextQuestion() {
+            currentIdx++;
+            if (currentIdx < quizQuestions.length) loadQuestion();
+            else { alert("全問終了！"); goHome(); }
+        }
+
+        function prevQuestion() {
+            if (currentIdx > 0) { currentIdx--; loadQuestion(); }
+        }
+
+        function goHome() {
+            document.getElementById('quiz-screen').style.display = 'none';
+            document.getElementById('menu-screen').style.display = 'block';
+            updateWeakCount();
+        }
+        updateWeakCount();
+    </script>
+</body>
+</html>
